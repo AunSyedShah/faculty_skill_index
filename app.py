@@ -1,18 +1,24 @@
 import streamlit as st
-import json
 import pandas as pd
+from pymongo import MongoClient
 
 # Set Streamlit to use full screen width
 st.set_page_config(layout="wide")
 
-# Load the JSON data
-with open("faculty_module_status.json", "r", encoding="utf-8") as f:
-    faculty_data = json.load(f)
+# MongoDB connection
+mongo_uri = "mongodb+srv://aunsyedshah:aunsyedshah@aunsyedshah.jv2le.mongodb.net/?retryWrites=true&w=majority&appName=aunsyedshah"
+client = MongoClient(mongo_uri)
+db = client["aptech"]
+collection = db["faculty_status"]
 
-# Convert nested dictionary to DataFrame
-df = pd.DataFrame.from_dict(faculty_data, orient='index')
-df.reset_index(inplace=True)
-df = df.rename(columns={'index': 'Faculty'})
+# Load data from MongoDB
+documents = list(collection.find({}, {"_id": 0}))  # Exclude MongoDB internal _id
+if not documents:
+    st.error("No data found in MongoDB.")
+    st.stop()
+
+# Convert to DataFrame
+df = pd.DataFrame(documents)
 
 # Title
 st.title("Faculty Module Approval Status")
@@ -27,7 +33,7 @@ status_filter = st.multiselect(
     default=["Approved", "Pending", "Not Approved", "Unknown"]
 )
 
-# Filter faculty name
+# Filter by faculty name
 filtered_df = df[df["Faculty"].str.contains(faculty_search, case=False, na=False)].copy()
 
 # Apply status filter to all module columns (excluding Faculty name)
@@ -47,5 +53,5 @@ def highlight_status(val):
 # Apply the styling
 styled_df = filtered_df.style.applymap(highlight_status, subset=filtered_df.columns[1:])
 
-# Display styled dataframe
+# Display styled DataFrame
 st.dataframe(styled_df, use_container_width=True, height=600)
