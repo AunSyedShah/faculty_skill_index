@@ -28,11 +28,24 @@ status_filter = st.multiselect(
 )
 
 # Filter faculty name
-filtered_df = df[df["Faculty"].str.contains(faculty_search, case=False, na=False)]
+filtered_df = df[df["Faculty"].str.contains(faculty_search, case=False, na=False)].copy()
 
-# Apply status filter to all columns *except* the Faculty column
+# Apply status filter to all module columns (excluding Faculty name)
 for col in filtered_df.columns[1:]:
     filtered_df[col] = filtered_df[col].apply(lambda x: x if x in status_filter else None)
 
-# Display the table using Streamlit's dataframe with full width and auto column sizing
-st.dataframe(filtered_df, use_container_width=True, height=600)
+# Define a color highlighting function
+def highlight_status(val):
+    color_map = {
+        "Approved": "#b6fcb6",       # Light green
+        "Pending": "#fff7aa",        # Light yellow
+        "Not Approved": "#fcb6b6",   # Light red
+        "Unknown": "#dddddd"         # Light gray
+    }
+    return f"background-color: {color_map.get(val, '#ffffff')}"
+
+# Apply the styling
+styled_df = filtered_df.style.applymap(highlight_status, subset=filtered_df.columns[1:])
+
+# Display styled dataframe
+st.dataframe(styled_df, use_container_width=True, height=600)
